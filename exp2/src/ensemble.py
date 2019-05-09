@@ -27,6 +27,7 @@ def read_train_data():
     train_votes_up = list(map(int,train_df.loc[:,'votes_up']))
     train_votes_all = list(map(int,train_df.loc[:,'votes_all']))
     train_label = list(map(int,train_df.loc[:,'label']))
+    print(train_label.count(1),train_label.count(0))
 
 def read_test_data():
     global test_Id,test_reviewerID,test_asin,test_reviewText,test_overall
@@ -69,6 +70,7 @@ def random_pick_train_set(size,start,end):
     #取出对应训练集
     small_train_set = []
     small_label_set = []
+    weights = []
     for i in temp:
         one_set = []
         # one_set.append(train_reviewerID[i])
@@ -77,43 +79,49 @@ def random_pick_train_set(size,start,end):
         # one_set.append(train_set['votes_up'][i])
         # one_set.append(train_set['votes_all'][i])
         one_set.append(count_words(train_reviewText[i]))
+        weights.append(float(train_votes_up[i])/float(train_votes_all[i]))
         small_train_set.append(one_set)
         small_label_set.append(train_label[i])
-    return small_train_set,small_label_set,temp
+    # print(small_train_set)
+    return small_train_set,small_label_set,temp,weights
 
-def predict(classfier,my_train_set,my_label_set,my_test_set):
+def predict(classfier,my_train_set,my_label_set,my_test_set,weights):
     if classfier == DECISION_TREE:
         clf = DecisionTreeClassifier()
         print('train with decision tree')
     elif classfier == SVM:
-        clf = SVC(gamma='scale')
+        clf = SVC(gamma='auto')
         print('train with SVM')
     else:
         print('ERROR: NO SUCH CLASSFIER')
-    clf.fit(my_train_set,my_label_set)
+    clf.fit(my_train_set,my_label_set,weights)
     print('predicting...')
-    return clf.predict(my_test_set)
+    res = clf.predict(my_test_set)
+    print(list(res).count(1),list(res).count(0))
+    return res
 
 def check_result(predict_result,label_set):
     total_num = len(label_set)
     correct_cnt = 0
+    print('predict_len',len(predict_result),len(label_set))
     for i in range(0,len(predict_result)):
         ans = label_set[i]
-        if(ans == predict_result[i]):
+        # if(predict_result[i] == 1):
+        #     print('cool',ans == predict_result[i],ans)
+        if(abs(ans - float(predict_result[i])) < 0.5):
             correct_cnt += 1
     print('total num:',total_num,'correct_cnt',correct_cnt)
     return float(correct_cnt)/float(total_num)
 
-def vote_for_result(results,weights,num):
+def calculate_result(results,weights,num):
     result = []
     for i in range(0,len(results[0])):
         temp = 0.0
         for j in range(0,num):
-            temp += float(results[j][i])*float(weights[j])
-        if temp > 0.7:
-            result.append(1)
-        else:
-            result.append(0)
+            temp += float(results[j][i])/float(num)
+        if(temp > 0.99999):
+            temp = 0.99999
+        result.append(temp)
     return result
 
 if __name__ == '__main__':
@@ -124,29 +132,31 @@ if __name__ == '__main__':
     pick_test_set = get_test_set()
     if(TEST_ON_TRAIN_SET):
         print('TEST ON TRAIN SET')
-        pick_test_set,pick_test_label_set,testid_set = random_pick_train_set(5000,TRAIN_SET_SIZE,57039)
-    _classifier = SVM
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    pick_train_set,pick_label_set,id_set = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
-    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set))
-    result = vote_for_result(results,[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],10)
+        pick_test_set,pick_test_label_set,testid_set,t_weights = random_pick_train_set(5000,TRAIN_SET_SIZE,57039)
+    _classifier = DECISION_TREE
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    pick_train_set,pick_label_set,id_set,weights = random_pick_train_set(20000,0,TRAIN_SET_SIZE)
+    results.append(predict(_classifier,pick_train_set,pick_label_set,pick_test_set,weights))
+    result = calculate_result(results,[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],11)
     if(not TEST_ON_TRAIN_SET):
         write_result(test_Id,result)
     else:
