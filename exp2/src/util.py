@@ -5,6 +5,8 @@ import matplotlib
 from matplotlib import pyplot as plt
 import operator
 
+#本文件主要用来做feature分析
+
 #train set labels 'reviewerID', 'asin', 'reviewText', 'overall', 'votes_up', 'votes_all','label'
 #test 'Id', 'reviewerID', 'asin', 'reviewText', 'overall'
 global train_reviewerID,train_asin,train_reviewText,train_overall,train_votes_up,train_votes_all,train_label
@@ -23,14 +25,16 @@ def count_words(line):
 # 参数依次为list,抬头,X轴标签,Y轴标签,XY轴的范围
 def draw_hist(list0,list1,Title,Xlabel,Ylabel,Xmin,Xmax,Ymin,Ymax):
     fig,(ax0,ax1) = plt.subplots(nrows=2,figsize=(9,6))
-    ax0.hist(list0,1000,density=True)
-    ax1.hist(list1,1000,density=True)
+    ax0.hist(list0,5,density=True)
+    ax1.hist(list1,5,density=True)
     ax0.set_title('label-0 text length distribution')
     ax1.set_title('label-1 text length distribution')
     ax0.set_xlim(Xmin,Xmax)
     ax0.set_ylim(Ymin,Ymax)
+ 
     ax1.set_xlim(Xmin,Xmax)
     ax1.set_ylim(Ymin,Ymax)
+
     fig.subplots_adjust(hspace=0.4)
     plt.show()
 
@@ -68,10 +72,11 @@ def read_train_data():
     asin_dic_zero = {}
     for i in range(len(train_label)):
         if train_label[i] == 1:
-            if train_asin[i] in asin_dic_one.keys():
-                asin_dic_one[train_asin[i]] += 1
-            else:
-                asin_dic_one[train_asin[i]] = 1
+            one_len.append(train_votes_all[i])
+            # if train_asin[i] in asin_dic_one.keys():
+            #     asin_dic_one[train_asin[i]] += 1
+            # else:
+            #     asin_dic_one[train_asin[i]] = 1
         #     t = train_reviewText[i]
         #     t = t.replace('.',' ')
         #     t = t.replace('!',' ')
@@ -103,30 +108,31 @@ def read_train_data():
             # word_one += count_words(train_reviewText[i])
             # id_len_one += len(train_asin[i])
         else:
-            if train_asin[i] in asin_dic_zero.keys():
-                asin_dic_zero[train_asin[i]] += 1
-            else:
-                asin_dic_zero[train_asin[i]] = 1
-    for i in asin_dic_zero.keys():
-        asin_dic_zero[i] = float(asin_dic_zero[i])/float(train_label.count(0))
-    for i in asin_dic_one.keys():
-        asin_dic_one[i] = float(asin_dic_one[i])/float(train_label.count(1))
-    delta_dic = {}
-    ave = 0.0
-    for i in asin_dic_zero.keys():
-        if i in asin_dic_one.keys():
-            delta = abs(asin_dic_zero[i] - asin_dic_one[i])
-        else:
-            delta = abs(asin_dic_zero[i])
-        delta_dic[i] = delta
-        ave += delta
-    for i in one_dic.keys():
-        if i not in zero_dic.keys():
-            delta = abs(one_dic[i])
-            delta_dic[i] = delta
-            ave+=delta
-    print(ave/float(len(set(train_asin))))
-    delta_dic = sorted(delta_dic.items(),key=operator.itemgetter(1),reverse=True)
+            zero_len.append(train_votes_all[i])
+        #     if train_asin[i] in asin_dic_zero.keys():
+        #         asin_dic_zero[train_asin[i]] += 1
+        #     else:
+        #         asin_dic_zero[train_asin[i]] = 1
+    # for i in asin_dic_zero.keys():
+    #     asin_dic_zero[i] = float(asin_dic_zero[i])/float(train_label.count(0))
+    # for i in asin_dic_one.keys():
+    #     asin_dic_one[i] = float(asin_dic_one[i])/float(train_label.count(1))
+    # delta_dic = {}
+    # ave = 0.0
+    # for i in asin_dic_zero.keys():
+    #     if i in asin_dic_one.keys():
+    #         delta = abs(asin_dic_zero[i] - asin_dic_one[i])
+    #     else:
+    #         delta = abs(asin_dic_zero[i])
+    #     delta_dic[i] = delta
+    #     ave += delta
+    # for i in one_dic.keys():
+    #     if i not in zero_dic.keys():
+    #         delta = abs(one_dic[i])
+    #         delta_dic[i] = delta
+    #         ave+=delta
+    # print(ave/float(len(set(train_asin))))
+    # delta_dic = sorted(delta_dic.items(),key=operator.itemgetter(1),reverse=True)
             # t = train_reviewText[i]
             # t = t.replace('.',' ')
             # t = t.replace('!',' ')
@@ -185,24 +191,29 @@ def read_train_data():
     y1 = []
     y0 = []
     x = []
-    delta_dic_t = delta_dic[:200]
-    for (k,v) in delta_dic_t:
-        x.append(k)
-        one = 0
-        if k in asin_dic_one.keys():
-            one = asin_dic_one[k]
-        zero = 0
-        if k in asin_dic_zero.keys():
-            zero = asin_dic_zero[k]
-        y0.append(zero)
-        y1.append(one)
-    idx = np.arange(len(x))
-    print(x)
+    # delta_dic_t = delta_dic[:200]
+    # for (k,v) in delta_dic_t:
+    #     x.append(k)
+    #     one = 0
+    #     if k in asin_dic_one.keys():
+    #         one = asin_dic_one[k]
+    #     zero = 0
+    #     if k in asin_dic_zero.keys():
+    #         zero = asin_dic_zero[k]
+    #     y0.append(zero)
+    #     y1.append(one)
+    x = [i for i in range(0,100)]
+    for i in range(0,100):
+        y0.append(zero_len.count(i)/float(len(zero_len)))
+        y1.append(one_len.count(i)/float(len(one_len)))
+    idx = np.arange(100)
+    # print(x)
     width = 0.4
+    print(y0)
     rects1 = plt.bar(idx, y0,width,color='red', label='one')
     rects2 = plt.bar(idx + width, y1,width,color='blue',label='zero')
-    # plt.xticks(idx + width, x)
-    plt.title('reviewerID frequency')
+    plt.xticks(idx + width, x)
+    plt.title('overall distribution')
     plt.show()
 
     # zero_dic = sorted(zero_dic.items(),key=operator.itemgetter(1),reverse=True)
@@ -213,7 +224,7 @@ def read_train_data():
 
     # print(vote_up_one/one_cnt,vote_all_one/one_cnt,overall_one/one_cnt,text_len_one/one_cnt,word_one/one_cnt,id_len_one/one_cnt)
     # print(vote_up_zero/zero_cnt,vote_all_zero/zero_cnt,overall_zero/zero_cnt,text_len_zero/zero_cnt,word_zero/zero_cnt,id_len_zero/zero_cnt)
-    
+    # draw_hist(zero_len,one_len,'overall distibution','overall','frequency',Xmin=0,Xmax=5,Ymin=0,Ymax=1)
 
 def read_test_data():
     global test_Id,test_reviewerID,test_asin,test_reviewText,test_overall

@@ -23,7 +23,20 @@
 
 ### Feature 选取和处理
 
-本次实验feature一共有`reviewerID，asin，reviewText，overall，votes_all，votes_up`，要在训练中让他们起到作用，需要对他们进行进一步处理。
+本次实验feature一共有`reviewerID，asin，reviewText，overall，votes_all，votes_up`，它们的具体含义为：
+
++ reviewerID：评论者ID。
+
++ asin：物品ID。
+
++ reviewText：评论文字。
++ overall：评分。
++ votes_all：这篇评论收到的投票总数。
++ votes_up：收到的投票中赞同的总数。
+
+要在训练中让他们起到作用，需要对他们进行进一步处理。
+
+
 
 #### 1. `reviewText` 
 
@@ -37,7 +50,7 @@
 
 ##### 文本单词数
 
-![](D:\code\Mechine-Learning\exp2\Figure_1.png)
+![](D:\code\Machine-Learning\exp2\Figure_1.png)
 
 上图中横轴为词数量，纵轴为概率。从图中可以看出，两种文本词数量都集中在0-600之间，label为0的文本词数量为75处达到峰值且分布较为集中，label为1的文本词数量在词数量为190处达到峰值，分布较为分散。
 
@@ -45,7 +58,7 @@
 
 ##### 文本长度
 
-![](D:\code\Mechine-Learning\exp2\Figure_2.png)
+![](D:\code\Machine-Learning\exp2\Figure_2.png)
 
 文本长度特征和文本单词数分布情况相似，两中文本具有分布差异但同样不够显著。
 
@@ -53,16 +66,34 @@
 
 记$ P(w_i|label_i) $为单词$w_i$在label为$label_i$的`reviewText`中出现的概率。下图为$ ||P(w_i|0) - P(w_i|1) ||  $最大的前200词的在两种编辑文本中出现的词频对比图。其中，红色为在label为1中的词频，蓝色为label为0中的词频。
 
-![](D:\code\Mechine-Learning\exp2\Figure_3.png)
+![](D:\code\Machine-Learning\exp2\Figure_3.png)
 
-可以看出，两者词频有差距，但是差距不大。
+可以看出，两者词频有差距且差距比较明显，可以根据词向量来训练弱学习器。
 
->  因此`reviewText`在两个label中各种feature差距不大。选用贝叶斯方法和决策树可能会较好。
+#### 2. `reviewerID`
 
-### 2. `reviewerID`
+根据常识判断，每个人对商品的评价会偏向于高质量或者低质量两个方面，因此`reviewerID`是分类的重要依据。实际上,$ reviewerID_i$ 在两类中出现概率之差最大的200个分布如下（红色是$ reviewerID_i​$出现在label为1中的概率，蓝色是出现在label为0中的概率）：
 
-根据常识判断，每个人对商品的评价会偏向于高质量或者低质量两个方面，因此`reviewerID`是分类的重要依据。实际上,$ reviewerID_i$ 在两类中出现概率之差最大的200个分布如下（红色是$ reviewerID_i$出现在label为1中的概率，蓝色是出现在label为0中的概率）：
+![](D:\code\Machine-Learning\exp2\Figure_5.png)
 
-![](D:\code\Mechine-Learning\exp2\Figure_4.png)
+因此，`reviewerID`是一个非常重要的判据。但是，`reviewerID`作为一串无规则数字，使用SVM分类比较困难，但是使用`DecisionTree`和贝叶斯分类很容易。
 
-但是，`reviewerID`是一个字符串，在SVM中
+#### 3. `asin`
+
+对于商品而言，好的商品有更多的高质量评论，因此`asin`应该也会是一个重要的分类依据，实际上,$ asin_i$ 在两类中出现概率之差最大的200个分布如下（红色是$asin_i​$出现在label为1中的概率，蓝色是出现在label为0中的概率）：
+
+![](D:\code\Machine-Learning\exp2\Figure_4.png)
+
+因此，`asin`是一个非常重要的判据。但是，`asin`作为一串无规则数字，使用SVM分类比较困难，但是使用`DecisionTree`和贝叶斯分类很容易。
+
+#### 4. `overall`
+
+高质量评论的评分实际分布如下（其中，红色是在label为0的评论中出现的概率，蓝色是在label为1中出现的概率）：
+
+![](D:\code\Machine-Learning\exp2\Figure_6.png)
+
+很明显，低质量评论评分分布较为随机，而高质量评分分布大多集中在高分。
+
+#### 5. `votes_all`和`votes_up`
+
+由于这两个feature只有在训练集中才有，所以只能作为训练集的权重来发挥作用。因此，在训练的过程中，可以采用`votes_up/votes_all`来做权重。
