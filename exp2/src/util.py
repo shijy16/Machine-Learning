@@ -202,7 +202,7 @@ def read_train_data():
     #         zero = asin_dic_zero[k]
     #     y0.append(zero)
     #     y1.append(one)
-    x = [i for i in range(0,100)]
+    x = [0,10,20,30]
     for i in range(0,100):
         y0.append(zero_len.count(i)/float(len(zero_len)))
         y1.append(one_len.count(i)/float(len(one_len)))
@@ -238,3 +238,16 @@ def read_test_data():
 read_train_data()
 a = ['dvd', 'movie', 'as', 'are', 'on', 'from', 'by', 'with', 'great', 'also', 'an', 'for', 'one', 'has', 'in', 'who', 'well', 'set', 'his', 'very', 'best', 'first', 'which', 'their', 'her', 'is', 'years', 'at', 'all', 'quality', 'most', 'will', 'music', 'more', 'time', 'of', 'each', 'series', 'when', 'some', 'two', 'up', 'other', 'that', 'you', 'wonderful', 'excellent', 'video', 'these', 'both', 'love', 'be', 'she', 'show', 'have', 'can', 'many', 'new', 'to', 'still', 'bad', 'sound', 'there', 'own', 'episodes', 'life', 'young', 'performance', 'a', 'and', 'release', 'shows', 'while', 'highly', 'been', 'beautiful', 'released', 'them', 'but', 'collection', 'only', 'my', 'may', 'out', 'its', 'work', 'this', 'than', 'episode', 'few', "it's", 'tv', 'production', 'features', 'classic', 'always', 'favorite', 'old', 'family', 'he', 'disc', 'back', 'perfect', 'version', 'here', 'later', 'during', 'cast', 'season', 'full', 'three', 'performances', 'recommend', 'it', 'although', 'picture', 'home', 'early', 'including', 'must', 'get', 'into', 'boring', 'good', 'see', 'especially', 'quite', 'find', 'available', '"the', 'before', 'included', 'ever', 'not', 'over', 'between', 'quot', 'little', 'seen', 'plot', 'dvds', 'so', 'those', 'sets', 'audio', 'does', 'they', 'several', 'different', 'long', 'now', 'played', 'live', 'such', 'through', 'after', 'fans', 'worst', 'times', 'makes',\
     'about', 'finally', 'workout', 'role', 'recommended', 'together', 'original', 'song', 'day', 'extras', 'superb', 'world', 'worth', 'though', 'often', 'stupid', 'heart', 'true', 'high', 'price', 'part', 'enjoy', 'movies', 'films', 'along', 'television', 'however', '"', 'four', 'plays', "didn't", 'late', 'second', 'waste', 'fun', 'songs', 'others', 'without', 'or', '1']
+
+
+# print("------------ Naive Bayes ------------------")
+# clfNB = BernoulliNB()
+# clfNB.fit(feature_train, label_train)
+# resultNB = clfNB.predict_proba(feature_test)
+
+# dataNB = []
+# dataNB.append("Id,Predicted")
+# for item in range(0, len(resultNB)):
+# 	x = str(item) + "," + str(round(resultNB[item][1], 2))
+# 	dataNB.append(x)
+# fpNB = open('./resultOne/testOneNB2.csv', 'w+')
