@@ -2,6 +2,7 @@ from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import  BernoulliNB
 from scipy.sparse import csr_matrix, vstack, hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -15,7 +16,7 @@ import sys
 import word2vec
 
 global train_df,train_label,train_data,model
-global test_Id,test_data,test_df
+global test_Id,test_data,test_df,test_label
 model = None
 test_Id = None
 test_data = None
@@ -23,20 +24,26 @@ test_df = None
 train_df = None
 train_label = None
 train_data = None
+test_label = None
 
 DECISION_TREE = 1
 SVM = 2
+BAYES = 6
 BAGGING = 3
 ADABOOST_M1 = 4
 EQUAL_WEIGHT = 5
 
-BAGGING_T = 21
-ADABOOST_M1_T = 11
-TEST_ON_TRAIN_SET = False
-CLASSFIER_TO_USE = SVM
-ENSEMBLE_WAY = BAGGING
-SAMPLE_WEIGHT = EQUAL_WEIGHT
-USE_TEXT_VECTOR = True
+BAGGING_T = 11                      #BAGGING迭代次数
+ADABOOST_M1_T = 11                  #ADABOOST.M1迭代次数
+TEST_ON_TRAIN_SET = False            #是否在训练集中划分测试集
+CLASSFIER_TO_USE = SVM                #使用何种弱学习器
+ENSEMBLE_WAY = BAGGING          #使用何种集成学习方法
+SAMPLE_WEIGHT = EQUAL_WEIGHT        #样本权重，为EQUAL_WEIGHT则为相同权重，否则为votes_up/votes_all
+
+
+USE_TEXT_VECTOR = False              #是否使用词向量
+if CLASSFIER_TO_USE == SVM:
+    USE_TEXT_VECTOR = True
 
 
 TRAIN_SET_SIZE = 57039
@@ -71,8 +78,7 @@ def read_train_and_test_data():
     global train_label,train_data,train_df
     train_df = pd.read_csv('../data/train.csv', sep='\t')
     train_label = list(map(int,train_df.loc[:,'label']))
-
-    global test_Id,test_data,test_df
+    global test_Id,test_data,test_df,test_label
     test_df = pd.read_csv('../data/test.csv', sep='\t')
     test_Id = list(map(str,test_df.loc[:,'Id']))
     print('data loaded')
@@ -85,12 +91,21 @@ def read_train_and_test_data():
         #countervec
         global model
         model = TfidfVectorizer(analyzer='word', stop_words='english')
-        train_vec = model.fit_transform(train_df['reviewText'])
-        test_vec = model.transform(test_df['reviewText'])
-        train_data = hstack([train_vec, np.mat(train_df['overall']).reshape((len(train_df), 1))], format='csr')
-        test_data = hstack([test_vec, np.mat(test_df['overall']).reshape((len(test_df), 1))],format='csr')
+        if(not TEST_ON_TRAIN_SET):
+            train_vec = model.fit_transform(train_df['reviewText'])
+            test_vec = model.transform(test_df['reviewText'])
+            train_data = hstack([train_vec, np.mat(train_df['overall']).reshape((len(train_df), 1))], format='csr')
+            test_data = hstack([test_vec, np.mat(test_df['overall']).reshape((len(test_df), 1))],format='csr')
+        else:
+            train_vec = model.fit_transform(train_df['reviewText'][0:TRAIN_SET_SIZE])
+            test_vec = model.transform(train_df['reviewText'][TRAIN_SET_SIZE:])
+            train_data = hstack([train_vec, np.mat(train_df['overall'][0:TRAIN_SET_SIZE]).reshape((TRAIN_SET_SIZE, 1))], format='csr')
+            test_data = hstack([test_vec, np.mat(train_df['overall'][TRAIN_SET_SIZE:]).reshape((len(train_df) - TRAIN_SET_SIZE, 1))],format='csr')
+            test_label = train_label[TRAIN_SET_SIZE:]
+            train_label = train_label[0:TRAIN_SET_SIZE]
         # print(train_data)
         print('text vec built finished')
+        return
         #word2vec
         # model = Word2Vec(train_df['reviewerText']+test_df['reviewText'],size=50, window=5, min_count=1, workers=4)
         # for i in train_df['reviewerText']:
@@ -130,7 +145,7 @@ def read_train_and_test_data():
         #         v = [0 for i in range(50)]
         #     test_data.append(v)
     #构造训练数据集和测试数据集
-    for i in range(len(train_label)):
+    for i in range(TRAIN_SET_SIZE):
         one_set = []
         if(USE_TEXT_VECTOR):
             None
@@ -139,27 +154,47 @@ def read_train_and_test_data():
                 one_set.append(train_df['overall'][i])
                 one_set.append(train_df['asin'][i])
                 one_set.append(train_df['reviewerID'][i])
-                one_set.append(len(train_df['reviewerText'][i]))
+                one_set.append(len(train_df['reviewText'][i]))
                 train_data.append(one_set)
             else:
-                one_set.append(len(train_df['reviewerText'][i]))
+                one_set.append(len(train_df['reviewText'][i]))
                 one_set.append(train_df['overall'][i])
                 train_data.append(one_set)
-    for i in range(len(test_Id)):
-        one_set = []
-        if(USE_TEXT_VECTOR):
-            None
-        else:
-            if(CLASSFIER_TO_USE != SVM):
-                one_set.append(test_df['overall'][i])
-                one_set.append(test_df['asin'][i])
-                one_set.append(test_df['reviewerID'][i])
-                one_set.append(len(test_df['reviewText'][i]))
-                test_data.append(one_set)
+    #测试集
+    if TEST_ON_TRAIN_SET:
+        for i in range(TRAIN_SET_SIZE,57039):
+            one_set = []
+            if(USE_TEXT_VECTOR):
+                None
             else:
-                one_set.append(len(test_df['reviewText'][i]))
-                one_set.append(test_df['overall'][i])
-                test_data.append(one_set)
+                if(CLASSFIER_TO_USE != SVM):
+                    one_set.append(train_df['overall'][i])
+                    one_set.append(train_df['asin'][i])
+                    one_set.append(train_df['reviewerID'][i])
+                    one_set.append(len(train_df['reviewText'][i]))
+                    test_data.append(one_set)
+                else:
+                    one_set.append(len(train_df['reviewText'][i]))
+                    one_set.append(train_df['overall'][i])
+                    test_data.append(one_set)
+        test_label = train_label[TRAIN_SET_SIZE:]
+        train_label = train_label[0:TRAIN_SET_SIZE]
+    else:
+        for i in range(len(test_Id)):
+            one_set = []
+            if(USE_TEXT_VECTOR):
+                None
+            else:
+                if(CLASSFIER_TO_USE != SVM):
+                    one_set.append(test_df['overall'][i])
+                    one_set.append(test_df['asin'][i])
+                    one_set.append(test_df['reviewerID'][i])
+                    one_set.append(len(test_df['reviewText'][i]))
+                    test_data.append(one_set)
+                else:
+                    one_set.append(len(test_df['reviewText'][i]))
+                    one_set.append(test_df['overall'][i])
+                    test_data.append(one_set)
     
     print(train_label.count(1),train_label.count(0))
 
@@ -192,7 +227,7 @@ def get_test_set():
     global test_data
     return test_data
 
-#从指定范围的训练集中取出随机大小的训练集
+#从[start,end]中取出size个训练集
 def get_train_set(size,start,end):
     global train_df,train_label
     big_set = np.arange(start,end)
@@ -201,16 +236,19 @@ def get_train_set(size,start,end):
     small_train_set = []
     small_label_set = []
     weights = []
-
     for i in temp:
         if(SAMPLE_WEIGHT == EQUAL_WEIGHT):
             # if(small_label_set)
             weights.append(float(1)/float(size))
         else:
             weights.append(float(train_df['votes_up'][i])/float(train_df['votes_all'][i]))
-        # small_train_set.append(train_data[i].toarray())
-        small_train_set.append(train_data[i])
         small_label_set.append(train_label[i])
+    if not USE_TEXT_VECTOR:
+        for i in temp:
+            small_train_set.append(train_data[i])
+    # else:
+    #     test_vec = model.transform(train_df['reviewText'][start:end-1])
+    #     small_train_set = hstack([test_vec, np.mat(train_df['overall'][start:end-1]).reshape((len(train_df['reviewText'][start:end-1]), 1))], format='csr')
     # small_train_set = csr_matrix(small_train_set)
     # print(small_train_set)
     normalize(weights)
@@ -222,9 +260,10 @@ def random_pick_one_in_train_set(start=0,end=TRAIN_SET_SIZE):
     i = random.randint(start,end - 1)
     return i
 
+#训练并预测
 def train_and_predict(classfier,my_train_set,my_label_set,my_test_set,weights = None):
     if classfier == DECISION_TREE:
-        clf = DecisionTreeClassifier(min_samples_split=30,class_weight='balanced')
+        clf = DecisionTreeClassifier(min_samples_split=30)
         print('train with decision tree')
         clf.fit(my_train_set,my_label_set,sample_weight=weights)
         print('predicting...')
@@ -233,13 +272,22 @@ def train_and_predict(classfier,my_train_set,my_label_set,my_test_set,weights = 
         clf = LinearSVC()
         clf = CalibratedClassifierCV(clf, method='sigmoid', cv = 3)
         print('train with SVM')
-        clf.fit(my_train_set,my_label_set)
+        clf.fit(my_train_set,my_label_set,sample_weight=weights)
         print('predicting...')
         res_ = clf.predict_proba(my_test_set)
         res = []
         for i in range(len(res_)):
-            res.append(round(res_[i][1],0))
+            res.append(round(res_[i][1],2))
         # res = clf.predict(my_test_set)
+    elif classfier == BAYES:
+        clf = BernoulliNB()
+        print('train with decision tree')
+        clf.fit(my_train_set,my_label_set,sample_weight=weights)
+        print('predicting...')
+        res_ = clf.predict_proba(my_test_set)
+        res = []
+        for i in range(len(res_)):
+            res.append(round(res_[i][1],2))
     else:
         print('ERROR: NO SUCH CLASSFIER')
     print(list(res).count(1),list(res).count(0))
@@ -250,12 +298,12 @@ def predict_(classfier,clf,test_set):
     if classfier == DECISION_TREE:
         res = clf.predict(test_set)
         print('train with decision tree')
-    elif classfier == SVM:
+    elif classfier == SVM or classfier == BAYES:
         # res = clf.predict(test_set)
         res_ = clf.predict_proba(test_set)
         res = []
         for i in range(len(res_)):
-            res.append(round(res_[i][1],0))
+            res.append(round(res_[i][1],2))
     else:
         print('ERROR: NO SUCH CLASSFIER')
     print('predicting...')
@@ -267,7 +315,7 @@ def check_result(predict_result,label_set):
     correct_cnt = 0
     correct_one = 0
     correct_zero = 0
-
+    print(len(predict_result),len(label_set))
     for i in range(0,len(predict_result)):
         ans = label_set[i]
         # if(predict_result[i] == 1):
@@ -300,7 +348,6 @@ def calculate_result(results,num,weights = None):
         if weights == None:
             for j in range(num):
                 temp += float(results[j][i])/float(num)
-                print(results[j][i],temp)
         else:
             for j in range(num):
                 temp += float(results[j][i])*weights[j]
@@ -393,8 +440,7 @@ def adaboost_m1(test_set,real_label_set = None):
         e = 0.0
         for i in range(len(result_set)):
             # print(label_set[i],result_set[i])
-            if(label_set[i] != result_set[i]):
-                print(result_set[i],label_set[i])
+            if(abs(float(label_set[i]) - result_set[i]) > 0.5):
                 e += sample_weight_set[i]
         print('error rate',e)
         if e > 0.5:
@@ -404,10 +450,9 @@ def adaboost_m1(test_set,real_label_set = None):
 
         #modify earch sample's weight
         for i in range(len(result_set)):
-            if(label_set[i] == result_set[i]):
+            if(abs(label_set[i] - result_set[i]) < 0.5):
                 # print(sample_weight_set[i],sample_weight_set[i]*beta)
                 sample_weight_set[i] = sample_weight_set[i]*beta
-
         
         # one_sum = 0.0
         # zero_sum = 0.0
@@ -424,7 +469,7 @@ def adaboost_m1(test_set,real_label_set = None):
 
         sample_weight_set = normalize(sample_weight_set)
         clf_weight_set.append(math.log(1/beta))
-        res = predict_(CLASSFIER_TO_USE,clf,test_data)
+        res = predict_(CLASSFIER_TO_USE,clf,test_set)
         if(TEST_ON_TRAIN_SET):
             check_result(res,real_label_set)
         result_sets.append(res)
@@ -434,27 +479,15 @@ def adaboost_m1(test_set,real_label_set = None):
 
 if __name__ == '__main__':
     read_train_and_test_data()
-    results = []
     pick_test_set = get_test_set()
-    pick_test_label_set = None
-    # print(train_df['reviewerText'][0])
-    if(TEST_ON_TRAIN_SET):
-        print('TEST ON TRAIN SET')
-        pick_test_set,pick_test_label_set,t_weights = get_train_set(7038,TRAIN_SET_SIZE,57039)
-  
-    result = []
-
+    result = None
     if ENSEMBLE_WAY == BAGGING:
-        result = bagging(pick_test_set,pick_test_label_set)
+        result = bagging(pick_test_set,test_label)
     elif ENSEMBLE_WAY == ADABOOST_M1:
-        result = adaboost_m1(pick_test_set,pick_test_label_set)
-        # clf = BaggingClassifier(DecisionTreeClassifier(class_weight='balanced',min_samples_leaf=0.1))
-        # train_set,label_set,sample_weight_set = get_train_set(TRAIN_SET_SIZE,0,TRAIN_SET_SIZE)
-        # clf.fit(train_set,label_set)
-        # result = clf.predict(pick_test_set)
+        result = adaboost_m1(pick_test_set,test_label)
 
     if(not TEST_ON_TRAIN_SET):
         write_result(test_Id,result)
     else:
-        check_result(result,pick_test_label_set)
+        check_result(result,test_label)
     # print(check_result(result,pick_test_label_set))
