@@ -37,7 +37,7 @@ BAGGING_T = 11                      #BAGGING迭代次数
 ADABOOST_M1_T = 11                  #ADABOOST.M1迭代次数
 TEST_ON_TRAIN_SET = False            #是否在训练集中划分测试集
 CLASSFIER_TO_USE = SVM                #使用何种弱学习器
-ENSEMBLE_WAY = BAGGING          #使用何种集成学习方法
+ENSEMBLE_WAY = ADABOOST_M1          #使用何种集成学习方法
 SAMPLE_WEIGHT = EQUAL_WEIGHT        #样本权重，为EQUAL_WEIGHT则为相同权重，否则为votes_up/votes_all
 
 
