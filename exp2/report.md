@@ -172,14 +172,33 @@ clf = CalibratedClassifierCV(clf, method='sigmoid', cv = 3)
 
 ### 实验结果
 
-|             | SVM  | DecisionTree |
-| ----------- | ---- | ------------ |
-| Bagging     |      |              |
-| AdaBoost.M1 |      |              |
+以下实验结果具体数据均在output文件夹中。
+
+|             | SVM    | DecisionTree |
+| ----------- | ------ | ------------ |
+| Bagging     | 80.523 | 72.376       |
+| AdaBoost.M1 | 80.230 | 73.274       |
+
+##### Kaggle截图
+
+最好结果和排名：
+
+![1557973801312](D:\code\Machine-Learning\exp2\2png)
+
+四种不同组合的结果：
+
+![1557973872652](D:\code\Machine-Learning\exp2\1.png)
 
 ### 结果分析
 
+从结果可以看出，采用SVM的Bagging结果最好。使用DecisionTree的Bagging效果最差。
 
++ SVM整体优于DecisionTree
+  + 训练数据差异：造成这个结果的原因和两个弱学习器训练数据的差异有关。因为DecisionTree在词向量处理过程上速度太慢，于是没有使用词向量，而是只使用了文本长度和其他几个feature作为训练数据来训练，这造成了信息丢失。
++ SVM使用Bagging优于使用AdaBoost.M1
+  + AdaBoost.M1在训练时会将更多的权重放在出错的样本上，这也决定了AdaBoost.M1在训练时受噪声影响更大。为了避免受到噪声影响，需要定期清理权重过高样本或者将权重过高样本权重调低。
++ DecisionTree使用AdaBoost.M1优于Bagging
+  + 这一点的主要原因还是因为DecisionTree的训练样本噪声没有SVM的训练样本噪声大。即主要还是因为我在使用两种学习器的时候使用的数据不一样。
 
 ## 四、 实验总结
 
@@ -207,3 +226,4 @@ SAMPLE_WEIGHT = EQUAL_WEIGHT        #样本权重，为EQUAL_WEIGHT则为相同�
 USE_TEXT_VECTOR = True              #是否使用词向量
 ````
 
+执行完毕后，结果会输出在output/目录下的result.csv中。
